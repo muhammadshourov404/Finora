@@ -7,6 +7,7 @@ function showBootError(title, detail){
   console.error(title, detail);
 }
 window.addEventListener('error', (e)=> showBootError("Script error", e.message + " (" + e.filename + ":" + e.lineno + ")"));
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
 // ================= SUPABASE INIT =================
 const SUPABASE_URL = "https://kedaqkrxtqsjmekiptvm.supabase.co";
@@ -24,6 +25,7 @@ let accounts = [];
 let categories = [];
 let transactions = [];
 let goals = [];
+let budgets = [];
 let currentPage = 'dashboard';
 let txType = 'income';
 let editingTxId = null;
@@ -62,7 +64,7 @@ async function init(){
 
     await loadProfile();
     await ensureDefaultCategories();
-    await Promise.all([loadAccounts(), loadCategories(), loadTransactions(), loadGoals()]);
+    await Promise.all([loadAccounts(), loadCategories(), loadTransactions(), loadGoals(), loadBudgets()]);
 
     setupUserChip();
     applyTranslations();
@@ -122,6 +124,12 @@ async function loadGoals(){
   if(error) throw error;
   goals = data || [];
 }
+async function loadBudgets(){
+  const { data, error } = await sb.from('budgets').select('*').eq('user_id', currentUser.id);
+  if(error){ console.warn(error); budgets = []; return; }
+  budgets = data || [];
+}
+function budgetFor(section){ return budgets.find(b=>b.section===section); }
 
 function setupUserChip(){
   const name = profile.full_name || currentUser.email;
@@ -249,11 +257,79 @@ function renderDashboard(){
     </div>
   </div>
 
+  <div class="panel-box" style="margin-bottom:18px;">
+    <div class="panel-head"><div class="panel-title">${t('panel.insights')}</div></div>
+    ${renderInsights(totalIncome, totalExpense, savingsRate)}
+  </div>
+
   <div class="panel-box">
     <div class="panel-head"><div class="panel-title">${t('panel.recent')}</div></div>
     ${recent.length ? recent.map(tx=>txRow(tx)).join('') : emptyState('inbox', t('empty.tx'))}
   </div>
   `;
+}
+
+function renderInsights(totalIncome, totalExpense, savingsRate){
+  const tips = [];
+  const expenseTx = transactions.filter(tx=>tx.type==='expense');
+
+  // category concentration
+  const byCat = {};
+  expenseTx.forEach(tx=>{ const cat=catById(tx.category_id); const key=catLabel(cat); byCat[key]=(byCat[key]||0)+Number(tx.amount); });
+  const sorted = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  if(sorted.length && totalExpense > 0){
+    const [topCat, topAmt] = sorted[0];
+    const pct = Math.round((topAmt/totalExpense)*100);
+    if(pct >= 35){
+      tips.push({ icon:'alert-triangle', color:'var(--gold)',
+        text: currentLang==='bn' ? `আপনার মোট খরচের ${toBengaliDigits(String(pct))}% যাচ্ছে "${topCat}"-এ — এটা একটু বেশি, কমানোর সুযোগ আছে কিনা দেখুন।`
+                                  : `${pct}% of your total spending goes to "${topCat}" — that's a large share, worth reviewing.` });
+    }
+  }
+
+  // savings rate based
+  if(totalIncome > 0){
+    if(savingsRate >= 30){
+      tips.push({ icon:'trophy', color:'var(--emerald)',
+        text: currentLang==='bn' ? `অসাধারণ! আপনি আপনার আয়ের ${toBengaliDigits(String(savingsRate))}% সঞ্চয় করছেন — এই অভ্যাস বজায় রাখুন।`
+                                  : `Excellent! You're saving ${savingsRate}% of your income — keep this habit up.` });
+    } else if(savingsRate >= 10){
+      tips.push({ icon:'thumbs-up', color:'var(--emerald)',
+        text: currentLang==='bn' ? `ভালো করছেন — সঞ্চয়ের হার ${toBengaliDigits(String(savingsRate))}%। ২০-৩০% এর দিকে এগোনোর চেষ্টা করতে পারেন।`
+                                  : `You're doing okay — savings rate is ${savingsRate}%. Try pushing toward 20-30%.` });
+    } else if(savingsRate >= 0){
+      tips.push({ icon:'alert-circle', color:'var(--gold)',
+        text: currentLang==='bn' ? `সঞ্চয়ের হার মাত্র ${toBengaliDigits(String(savingsRate))}%। অপ্রয়োজনীয় খরচ চিহ্নিত করে একটা বাজেট সেট করুন।`
+                                  : `Savings rate is only ${savingsRate}%. Try identifying non-essential expenses and set a budget.` });
+    } else {
+      tips.push({ icon:'siren', color:'var(--danger)',
+        text: currentLang==='bn' ? `আপনার খরচ আয়ের চেয়ে বেশি হয়ে যাচ্ছে। এখনই ব্যয় পর্যালোচনা করা জরুরি।`
+                                  : `You're spending more than you earn. It's important to review your expenses now.` });
+    }
+  } else {
+    tips.push({ icon:'info', color:'var(--text-dim)',
+      text: currentLang==='bn' ? 'এখনো কোনো আয় যুক্ত করা হয়নি। আয় যুক্ত করলে এখানে ব্যক্তিগত পরামর্শ দেখাবে।'
+                                : 'No income recorded yet. Add income to see personalized suggestions here.' });
+  }
+
+  // recurring large expense alert (single transaction > 20% of income)
+  if(totalIncome > 0){
+    const bigTx = expenseTx.find(tx=> Number(tx.amount) > totalIncome*0.2);
+    if(bigTx){
+      const cat = catById(bigTx.category_id);
+      tips.push({ icon:'zap', color:'var(--text-dim)',
+        text: currentLang==='bn' ? `"${catLabel(cat)}" ক্যাটাগরিতে একটি বড় খরচ (${fmtMoney(bigTx.amount)}) লক্ষ্য করা গেছে — আপনার মোট আয়ের একটা বড় অংশ।`
+                                  : `A large expense in "${catLabel(cat)}" (${fmtMoney(bigTx.amount)}) stands out — a significant chunk of your income.` });
+    }
+  }
+
+  return tips.slice(0,3).map(tip=>`
+    <div style="display:flex; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border);">
+      <div style="width:34px;height:34px;border-radius:9px;background:${tip.color}18;color:${tip.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i data-lucide="${tip.icon}" style="width:16px;height:16px;"></i>
+      </div>
+      <div style="font-size:13.5px; color:var(--text); line-height:1.5; padding-top:4px;">${tip.text}</div>
+    </div>`).join('');
 }
 
 function statCard(icon, label, value, color, bg){
@@ -356,12 +432,40 @@ function renderSection(section){
   const sectionTx = transactions.filter(tx=>tx.section===section);
   const income = sumBy(sectionTx, 'income');
   const expense = sumBy(sectionTx, 'expense');
+  const budget = budgetFor(section);
+  const thisMonth = monthKey(new Date());
+  const monthExpense = sectionTx.filter(tx=>tx.type==='expense' && monthKey(tx.transaction_date)===thisMonth).reduce((s,tx)=>s+Number(tx.amount),0);
+
+  let budgetHTML = '';
+  if(budget){
+    const pct = Math.min(100, Math.round((monthExpense / budget.monthly_limit) * 100));
+    const over = monthExpense > budget.monthly_limit;
+    budgetHTML = `
+    <div class="panel-box" style="margin-bottom:18px;">
+      <div class="panel-head">
+        <div class="panel-title">${t('budget.title')}</div>
+        <button class="icon-btn" onclick="goPage('settings')" title="Edit"><i data-lucide="pencil"></i></button>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%; ${over?'background:linear-gradient(90deg,#FF6B6B,#d94545);':''}"></div></div>
+      <div class="goal-foot">
+        <span>${fmtMoney(monthExpense)} ${t('goal.of')} ${fmtMoney(budget.monthly_limit)}</span>
+        <span style="font-weight:600; color:${over?'var(--danger)':'var(--emerald)'};">${pct}%${over?' ⚠':''}</span>
+      </div>
+    </div>`;
+  } else {
+    budgetHTML = `<div class="panel-box" style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center;">
+      <span style="color:var(--text-dim); font-size:13px;">${t('budget.notset')}</span>
+      <button class="btn-add" onclick="goPage('settings')"><i data-lucide="plus"></i><span>${t('budget.set')}</span></button>
+    </div>`;
+  }
+
   return `
   <div class="stat-grid">
     ${statCard('trending-up', t('stat.income'), fmtMoney(income), 'var(--emerald)', 'var(--emerald-soft)')}
     ${statCard('trending-down', t('stat.expense'), fmtMoney(expense), 'var(--danger)', 'var(--danger-dim)')}
     ${statCard('wallet', t('stat.balance'), fmtMoney(income-expense), 'var(--gold)', '#E8B95C18')}
   </div>
+  ${budgetHTML}
   <div class="panel-box">
     <div class="panel-head">
       <div class="panel-title">${t('panel.transactions')}</div>
@@ -461,6 +565,8 @@ function exportPDF(){
 
 // ================= SETTINGS PAGE =================
 function renderSettingsPage(){
+  const sections = ['personal','student','business','savings'];
+  const sectionLabels = { personal:t('nav.personal'), student:t('nav.student'), business:t('nav.business'), savings:t('nav.savings') };
   return `
   <div class="panel-box" style="margin-bottom:18px;">
     <div class="panel-title" style="margin-bottom:14px;">${t('settings.profile')}</div>
@@ -473,11 +579,42 @@ function renderSettingsPage(){
     </div>
     <button class="btn-primary" onclick="saveProfile()">${t('btn.save')}</button>
   </div>
+  <div class="panel-box" style="margin-bottom:18px;">
+    <div class="panel-title" style="margin-bottom:6px;">${t('budget.monthly')}</div>
+    <div style="color:var(--text-dim); font-size:13px; margin-bottom:14px;">${t('budget.desc')}</div>
+    ${sections.map(s=>{
+      const b = budgetFor(s);
+      return `<div class="field">
+        <label>${sectionLabels[s]}</label>
+        <div class="input-box"><input type="number" min="0" step="0.01" id="budget_${s}" value="${b ? b.monthly_limit : ''}" placeholder="${t('budget.noLimit')}"></div>
+      </div>`;
+    }).join('')}
+    <button class="btn-primary" onclick="saveBudgets()">${t('btn.save')}</button>
+  </div>
   <div class="panel-box">
     <div class="panel-title" style="margin-bottom:10px; color:var(--danger);">${t('settings.danger')}</div>
     <div style="color:var(--text-dim); font-size:13px; margin-bottom:12px;">${t('settings.logoutdesc')}</div>
     <button class="btn-danger" onclick="logout()">${t('settings.logout')}</button>
   </div>`;
+}
+
+async function saveBudgets(){
+  const sections = ['personal','student','business','savings'];
+  for(const s of sections){
+    const val = parseFloat(document.getElementById('budget_'+s).value);
+    const existing = budgetFor(s);
+    if(isNaN(val) || val <= 0){
+      if(existing) await sb.from('budgets').delete().eq('id', existing.id);
+      continue;
+    }
+    if(existing){
+      await sb.from('budgets').update({ monthly_limit: val }).eq('id', existing.id);
+    } else {
+      await sb.from('budgets').insert({ user_id: currentUser.id, section: s, monthly_limit: val, currency: profile.default_currency });
+    }
+  }
+  await loadBudgets();
+  renderCurrentPage();
 }
 
 async function saveProfile(){
