@@ -125,6 +125,16 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 @keyframes skelMove{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 .skel-stat{height:88px; border-radius:var(--radius);}
 .skel-row{height:60px; border-radius:10px; margin-bottom:8px;}
+
+/* Icon picker */
+.icon-picker{display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-top:4px;}
+.icon-opt{
+  aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:10px;
+  background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim); cursor:pointer; transition:.15s;
+}
+.icon-opt svg{width:17px;height:17px;}
+.icon-opt:hover{border-color:var(--emerald); color:var(--text);}
+.icon-opt.selected{background:var(--emerald-dim); border-color:var(--emerald); color:var(--emerald);}
 .stat-top{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;}
 .stat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;}
 .stat-icon svg{width:17px;height:17px;}
@@ -405,6 +415,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
       <div class="field">
         <label data-i18n="field.startbal">Starting Balance</label>
         <div class="input-box"><input type="number" id="accBalance" step="0.01" value="0"></div>
+      </div>
+      <div class="field">
+        <label data-i18n="field.icon">Icon</label>
+        <div class="icon-picker" id="accIconPicker"></div>
+        <input type="hidden" id="accIcon" value="wallet">
       </div>
       <button type="submit" class="btn-primary" data-i18n="btn.save">Save</button>
     </form>
