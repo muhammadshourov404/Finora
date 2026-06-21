@@ -89,7 +89,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   display:flex; align-items:center; gap:7px; background:var(--emerald); color:#06140F; border:none;
   padding:9px 16px; border-radius:10px; font-weight:700; font-size:13.5px; cursor:pointer; transition:.15s;
 }
-.btn-add:hover{background:#00f0b5;}
+.btn-add:hover{background:#00f0b5; transform:translateY(-1px);}
+.btn-add:active{transform:translateY(0) scale(.97);}
 .btn-add svg{width:15px;height:15px;}
 
 .content{padding:24px 28px; flex:1;}
@@ -101,7 +102,29 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:24px;}
 .stat-card{
   background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden;
+  transition:transform .2s ease, border-color .2s ease;
 }
+.stat-card:hover{transform:translateY(-3px); border-color:#2d3548;}
+
+/* Hero banner */
+.hero-banner{
+  background:linear-gradient(135deg,#0F2A24 0%, #12161F 60%);
+  border:1px solid var(--border); border-radius:var(--radius);
+  padding:22px 24px; margin-bottom:20px; position:relative; overflow:hidden;
+}
+.hero-banner::before{content:'';position:absolute;top:-60%;right:-10%;width:300px;height:300px;
+  background:radial-gradient(circle,#00D9A322,transparent 70%);}
+.hero-greeting{font-size:13px; color:var(--text-dim); margin-bottom:4px; position:relative; z-index:1;}
+.hero-name{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:600; margin-bottom:10px; position:relative; z-index:1;}
+.hero-insight{font-size:13.5px; color:var(--emerald); display:flex; align-items:center; gap:6px; font-weight:500; position:relative; z-index:1;}
+.hero-date{font-size:12px; color:var(--text-faint); position:relative; z-index:1;}
+
+/* Skeleton loading */
+.skel{background:linear-gradient(90deg,var(--surface-2) 25%,var(--surface-3) 50%,var(--surface-2) 75%);
+  background-size:200% 100%; animation:skelMove 1.4s infinite; border-radius:8px;}
+@keyframes skelMove{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.skel-stat{height:88px; border-radius:var(--radius);}
+.skel-row{height:60px; border-radius:10px; margin-bottom:8px;}
 .stat-top{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;}
 .stat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;}
 .stat-icon svg{width:17px;height:17px;}
@@ -118,7 +141,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 @media (max-width:980px){.grid-2{grid-template-columns:1fr;}}
 
 /* Transaction list */
-.tx-row{display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border);}
+.tx-row{display:flex; align-items:center; gap:12px; padding:12px 8px; border-bottom:1px solid var(--border); border-radius:8px; transition:background .15s ease;}
+.tx-row:hover{background:var(--surface-2);}
 .tx-row:last-child{border-bottom:none;}
 .tx-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tx-icon svg{width:16px;height:16px;}
@@ -136,7 +160,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .empty-state p{font-size:13.5px;}
 
 /* Goals */
-.goal-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:14px;}
+.goal-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:14px; transition:transform .2s ease, border-color .2s ease;}
+.goal-card:hover{transform:translateY(-2px); border-color:#2d3548;}
 .goal-top{display:flex; justify-content:space-between; margin-bottom:10px;}
 .goal-name{font-weight:600; font-size:14.5px;}
 .goal-deadline{font-size:11.5px; color:var(--text-faint);}
@@ -147,8 +172,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 /* Account cards */
 .account-card{
   background:linear-gradient(155deg,#161B26,#10141D); border:1px solid var(--border); border-radius:14px;
-  padding:16px 18px; min-width:170px; flex-shrink:0;
+  padding:16px 18px; min-width:170px; flex-shrink:0; transition:transform .2s ease, border-color .2s ease; cursor:pointer;
 }
+.account-card:hover{transform:translateY(-3px); border-color:#00D9A355;}
 .account-type{font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em;}
 .account-name{font-weight:600; font-size:14px; margin:4px 0 10px;}
 .account-balance{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600;}
