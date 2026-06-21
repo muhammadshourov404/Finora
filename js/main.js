@@ -55,6 +55,11 @@ async function init(){
     if(!data.session){ window.location.href = 'index.html'; return; }
     currentUser = data.session.user;
 
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'block';
+    document.getElementById('contentArea').innerHTML = skeletonHTML();
+    lucide.createIcons();
+
     await loadProfile();
     await ensureDefaultCategories();
     await Promise.all([loadAccounts(), loadCategories(), loadTransactions(), loadGoals()]);
@@ -64,14 +69,21 @@ async function init(){
     setLang(currentLang);
     document.getElementById('txDate').value = new Date().toISOString().slice(0,10);
 
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('appShell').style.display = 'block';
-    lucide.createIcons();
-
     goPage('dashboard');
   }catch(err){
     showBootError("Failed to load app", err.message);
   }
+}
+
+function skeletonHTML(){
+  return `
+  <div class="stat-grid">
+    <div class="skel skel-stat"></div><div class="skel skel-stat"></div>
+    <div class="skel skel-stat"></div><div class="skel skel-stat"></div>
+  </div>
+  <div class="panel-box">
+    <div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div>
+  </div>`;
 }
 
 async function loadProfile(){
@@ -136,21 +148,46 @@ function renderCurrentPage(){
     business:'nav.business', savings:'nav.savings', goals:'nav.goals', reports:'nav.reports', settings:'nav.settings' };
   document.getElementById('pageTitle').textContent = t(titles[currentPage]);
   const area = document.getElementById('contentArea');
+  area.style.opacity = '0';
+  area.style.transform = 'translateY(6px)';
 
-  if(currentPage === 'dashboard') area.innerHTML = renderDashboard();
-  else if(['personal','student','business','savings'].includes(currentPage)) area.innerHTML = renderSection(currentPage);
-  else if(currentPage === 'goals') area.innerHTML = renderGoalsPage();
-  else if(currentPage === 'reports') area.innerHTML = renderReportsPage();
-  else if(currentPage === 'settings') area.innerHTML = renderSettingsPage();
+  setTimeout(()=>{
+    if(currentPage === 'dashboard') area.innerHTML = renderDashboard();
+    else if(['personal','student','business','savings'].includes(currentPage)) area.innerHTML = renderSection(currentPage);
+    else if(currentPage === 'goals') area.innerHTML = renderGoalsPage();
+    else if(currentPage === 'reports') area.innerHTML = renderReportsPage();
+    else if(currentPage === 'settings') area.innerHTML = renderSettingsPage();
 
-  lucide.createIcons();
-  if(currentPage === 'dashboard') setTimeout(drawDashboardCharts, 30);
+    lucide.createIcons();
+    if(currentPage === 'dashboard') setTimeout(drawDashboardCharts, 30);
+
+    area.style.transition = 'opacity .25s ease, transform .25s ease';
+    requestAnimationFrame(()=>{ area.style.opacity = '1'; area.style.transform = 'translateY(0)'; });
+  }, 80);
 }
 
 // ================= HELPERS =================
 function fmtMoney(amount, currency){
   const sym = CURRENCY_SYMBOL[currency || profile.default_currency] || '';
-  return sym + ' ' + Number(amount).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2});
+  const num = Number(amount);
+  if(currentLang === 'bn'){
+    return sym + ' ' + toBengaliDigits(formatIndianStyle(num));
+  }
+  return sym + ' ' + num.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:2});
+}
+function formatIndianStyle(num){
+  const neg = num < 0; num = Math.abs(num);
+  const fixed = num.toFixed(num % 1 === 0 ? 0 : 2);
+  const [intPart, decPart] = fixed.split('.');
+  let last3 = intPart.length > 3 ? intPart.slice(-3) : intPart;
+  let other = intPart.length > 3 ? intPart.slice(0, -3) : '';
+  if(other !== '') other = other.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+  const result = (other ? other + ',' : '') + last3;
+  return (neg ? '-' : '') + result + (decPart ? '.' + decPart : '');
+}
+function toBengaliDigits(str){
+  const map = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
+  return str.replace(/[0-9]/g, d=>map[d]);
 }
 function catById(id){ return categories.find(c=>c.id===id); }
 function accById(id){ return accounts.find(a=>a.id===id); }
@@ -166,13 +203,29 @@ function renderDashboard(){
   const savingsRate = totalIncome > 0 ? Math.round((netBalance/totalIncome)*100) : 0;
 
   const recent = transactions.slice(0,6);
+  const hour = new Date().getHours();
+  const greetKey = hour < 12 ? 'greet.morning' : hour < 17 ? 'greet.afternoon' : 'greet.evening';
+  const greetText = { 'greet.morning': currentLang==='bn'?'শুভ সকাল':'Good morning',
+    'greet.afternoon': currentLang==='bn'?'শুভ অপরাহ্ন':'Good afternoon',
+    'greet.evening': currentLang==='bn'?'শুভ সন্ধ্যা':'Good evening' }[greetKey];
+  const dateStr = new Date().toLocaleDateString(currentLang==='bn' ? 'bn-BD' : 'en-US', { weekday:'long', day:'numeric', month:'long' });
+  const insightText = netBalance >= 0
+    ? (currentLang==='bn' ? `এই মাসে আপনি ভালো অবস্থানে আছেন — সঞ্চয়ের হার ${toBengaliDigits(String(savingsRate))}%` : `You're on track — savings rate is ${savingsRate}%`)
+    : (currentLang==='bn' ? 'খরচ আয়ের চেয়ে বেশি হয়ে যাচ্ছে, একটু নজর দিন' : 'Expenses are exceeding income — keep an eye on it');
 
   return `
+  <div class="hero-banner">
+    <div class="hero-greeting">${greetText}, ${escapeHtml(profile.full_name || currentUser.email.split('@')[0])}</div>
+    <div class="hero-name">${fmtMoney(netBalance)}</div>
+    <div class="hero-insight"><i data-lucide="${netBalance>=0?'sparkles':'alert-circle'}" style="width:14px;height:14px;"></i> ${insightText}</div>
+    <div class="hero-date" style="margin-top:8px;">${dateStr}</div>
+  </div>
+
   <div class="stat-grid">
     ${statCard('trending-up', t('stat.income'), fmtMoney(totalIncome), 'var(--emerald)', 'var(--emerald-soft)')}
     ${statCard('trending-down', t('stat.expense'), fmtMoney(totalExpense), 'var(--danger)', 'var(--danger-dim)')}
     ${statCard('wallet', t('stat.balance'), fmtMoney(netBalance), 'var(--gold)', '#E8B95C18')}
-    ${statCard('piggy-bank', t('stat.savings'), savingsRate + '%', 'var(--emerald)', 'var(--emerald-soft)')}
+    ${statCard('piggy-bank', t('stat.savings'), (currentLang==='bn'?toBengaliDigits(String(savingsRate)):savingsRate) + '%', 'var(--emerald)', 'var(--emerald-soft)')}
   </div>
 
   <div style="margin-bottom:18px;">
