@@ -267,8 +267,11 @@ function statCard(icon, label, value, color, bg){
 
 function accountCard(a){
   const typeLabel = { cash:t('acctype.cash'), bank:t('acctype.bank'), mobile_banking:t('acctype.mobile') }[a.type] || a.type;
-  return `<div class="account-card" onclick="openAccModal('${a.id}')" style="cursor:pointer;">
-    <div class="account-type">${typeLabel}</div>
+  return `<div class="account-card" onclick="openAccModal('${a.id}')">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div class="account-type">${typeLabel}</div>
+      <i data-lucide="${a.icon || 'wallet'}" style="width:15px;height:15px; color:var(--gold);"></i>
+    </div>
     <div class="account-name">${a.name}</div>
     <div class="account-balance">${fmtMoney(a.balance, a.currency)}</div>
   </div>`;
@@ -574,10 +577,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
       name: document.getElementById('accName').value.trim(),
       type: document.getElementById('accType').value,
       balance: parseFloat(document.getElementById('accBalance').value) || 0,
-      currency: profile.default_currency
+      currency: profile.default_currency,
+      icon: document.getElementById('accIcon').value || 'wallet'
     };
     try{
-      const { error } = await sb.from('accounts').insert(payload);
+      let error;
+      if(editingAccId){
+        ({ error } = await sb.from('accounts').update(payload).eq('id', editingAccId));
+      } else {
+        ({ error } = await sb.from('accounts').insert(payload));
+      }
       if(error) throw error;
       await loadAccounts();
       closeAccModal();
@@ -637,12 +646,44 @@ async function quickDeleteGoal(id){
 }
 
 // ================= ACCOUNT MODAL =================
-function openAccModal(){
+const ACCOUNT_ICONS = ['wallet','banknote','landmark','smartphone','credit-card','piggy-bank',
+  'coins','briefcase','vault','wallet-cards','hand-coins','building-2'];
+
+function renderIconPicker(selected){
+  const box = document.getElementById('accIconPicker');
+  box.innerHTML = ACCOUNT_ICONS.map(ic=>
+    `<div class="icon-opt ${ic===selected?'selected':''}" data-icon="${ic}" onclick="selectAccIcon('${ic}')">
+      <i data-lucide="${ic}"></i>
+    </div>`).join('');
+  lucide.createIcons();
+}
+function selectAccIcon(icon){
+  document.getElementById('accIcon').value = icon;
+  document.querySelectorAll('#accIconPicker .icon-opt').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.icon === icon);
+  });
+}
+
+let editingAccId = null;
+function openAccModal(id){
+  editingAccId = id || null;
   document.getElementById('accMsg').className = 'msg';
   document.getElementById('accForm').reset();
+  if(id){
+    const a = accById(id);
+    if(!a) return;
+    document.getElementById('accName').value = a.name;
+    document.getElementById('accType').value = a.type;
+    document.getElementById('accBalance').value = a.balance;
+    document.getElementById('accIcon').value = a.icon || 'wallet';
+    renderIconPicker(a.icon || 'wallet');
+  } else {
+    document.getElementById('accIcon').value = 'wallet';
+    renderIconPicker('wallet');
+  }
   document.getElementById('accModal').classList.add('open');
 }
-function closeAccModal(){ document.getElementById('accModal').classList.remove('open'); }
+function closeAccModal(){ document.getElementById('accModal').classList.remove('open'); editingAccId = null; }
 
 // ================= GOAL MODAL =================
 function openGoalModal(){
