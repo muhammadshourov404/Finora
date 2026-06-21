@@ -16,6 +16,7 @@ const translations = {
     "stat.income":"Total Income", "stat.expense":"Total Expense", "stat.balance":"Net Balance", "stat.savings":"Savings Rate",
     "panel.recent":"Recent Transactions", "panel.breakdown":"Spending Breakdown", "panel.trend":"Income vs Expense (6 months)",
     "panel.accounts":"Your Accounts", "panel.transactions":"All Transactions", "panel.goals":"Your Goals",
+    "panel.insights":"Smart Suggestions",
     "empty.tx":"No transactions yet. Tap Add to get started.",
     "empty.goals":"No goals yet. Set your first savings target.",
     "empty.accounts":"No accounts yet.",
@@ -30,6 +31,9 @@ const translations = {
     "confirm.delete":"Are you sure you want to delete this?",
     "msg.txsaved":"Transaction saved!", "msg.accsaved":"Account added!", "msg.goalsaved":"Goal saved!",
     "msg.error":"Something went wrong:",
+    "budget.title":"Monthly Budget", "budget.notset":"No budget set for this section yet.",
+    "budget.set":"Set Budget", "budget.monthly":"Monthly Budgets", "budget.noLimit":"No limit",
+    "budget.desc":"Set a monthly spending limit per section. Leave blank for no limit.",
   },
   bn: {
     "nav.dashboard":"ড্যাশবোর্ড", "nav.group.sections":"সেকশন", "nav.personal":"ব্যক্তিগত",
@@ -48,6 +52,7 @@ const translations = {
     "stat.income":"মোট আয়", "stat.expense":"মোট ব্যয়", "stat.balance":"নেট ব্যালেন্স", "stat.savings":"সঞ্চয়ের হার",
     "panel.recent":"সাম্প্রতিক লেনদেন", "panel.breakdown":"খরচের বিশ্লেষণ", "panel.trend":"আয় বনাম ব্যয় (৬ মাস)",
     "panel.accounts":"আপনার অ্যাকাউন্ট", "panel.transactions":"সব লেনদেন", "panel.goals":"আপনার লক্ষ্যসমূহ",
+    "panel.insights":"স্মার্ট পরামর্শ",
     "empty.tx":"এখনো কোনো লেনদেন নেই। শুরু করতে 'যুক্ত করুন' চাপুন।",
     "empty.goals":"এখনো কোনো লক্ষ্য নেই। প্রথম সঞ্চয় টার্গেট সেট করুন।",
     "empty.accounts":"এখনো কোনো অ্যাকাউন্ট নেই।",
@@ -62,6 +67,9 @@ const translations = {
     "confirm.delete":"আপনি কি নিশ্চিত মুছে ফেলতে চান?",
     "msg.txsaved":"লেনদেন সেভ হয়েছে!", "msg.accsaved":"অ্যাকাউন্ট যুক্ত হয়েছে!", "msg.goalsaved":"লক্ষ্য সেভ হয়েছে!",
     "msg.error":"কিছু একটা ভুল হয়েছে:",
+    "budget.title":"মাসিক বাজেট", "budget.notset":"এই সেকশনের জন্য এখনো বাজেট সেট করা হয়নি।",
+    "budget.set":"বাজেট সেট করুন", "budget.monthly":"মাসিক বাজেট", "budget.noLimit":"কোনো লিমিট নেই",
+    "budget.desc":"প্রতি সেকশনের জন্য মাসিক খরচের সীমা সেট করুন। সীমা না রাখতে চাইলে ফাঁকা রাখুন।",
   }
 };
 
